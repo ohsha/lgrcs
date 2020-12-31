@@ -5,10 +5,10 @@ import numpy as np
 
 class Node:
 
-    def __init__(self,predicted_class, n_instances, n_sampels_per_class):
+    def __init__(self,predicted_class, n_instances, n_samples_per_class):
         self.predicted_class = predicted_class
         self.n_instances = n_instances
-        self.n_sampels_per_class = n_sampels_per_class
+        self.n_samples_per_class = n_samples_per_class
         self.threshold = 0
         self.feature_index = 0
         self.left = None
@@ -20,17 +20,16 @@ class DecisionTree:
     def __init__(self, max_depth=3):
         self.max_depth = max_depth
 
+
     def _gini_prob(self, x, y):
         size_node = x.size
 
-        # calculate the probability for each class in the same leave.
         p_j = np.array([x[y == c].size for c in range(self.n_classes)])
         P = (p_j / (size_node + 1e-5)) ** 2
-
-        # P_k means the gini impurity for only one leave
         P_k = 1 - np.sum(P)
 
         return P_k
+
 
     def _gini(self,X, y, value):
         n_instances = X.shape[0]
@@ -46,6 +45,7 @@ class DecisionTree:
 
         return gini_left + gini_right, value
 
+
     def _best_split(self, X, y):
         best_idx, best_thr = None, None
         gini_list = np.array([self._gini(X[:,i], y, np.mean(X[:,i])) for i in range(self.n_features)])
@@ -54,16 +54,15 @@ class DecisionTree:
 
         return best_idx, best_thr
 
+
     def _build_tree(self,X, y,depth=0):
-        n_sampels_per_class = [sum( y == c) for c in range(self.n_classes)]
-        predicted_class = np.argmax(n_sampels_per_class)
+        n_samples_per_class = [sum( y == c) for c in range(self.n_classes)]
+        predicted_class = np.argmax(n_samples_per_class)
 
         node = Node(
-
             predicted_class=predicted_class,
             n_instances = X.shape[0],
-            n_sampels_per_class=n_sampels_per_class
-
+            n_samples_per_class=n_samples_per_class
         )
 
         if depth < self.max_depth:
@@ -84,6 +83,7 @@ class DecisionTree:
 
         return node
 
+
     def _predict(self, x, node):
         if x[node.feature_index] <= node.threshold:
             node = node.left
@@ -95,27 +95,31 @@ class DecisionTree:
         else:
             return self._predict(x, node)
 
+
     def fit(self, X, y):
         self.n_classes = len(set(y))
         self.n_features = X.shape[1]
         self.tree = self._build_tree(X, y )
+
 
     def predict(self, X_test):
         labels = [self._predict(x, self.tree) for x in X_test]
         return labels
 
 
-# ==================================================================== #
-if __name__ == '__man__':
-    data = pd.read_csv(r'datasets\wdbc.data', header=None)
-    data = data.replace(to_replace=['M'], value=1, inplace=False)
-    data = data.replace(to_replace=['B'], value=0, inplace=False)
-    X = data.iloc[:, 2:].values
-    y = data.iloc[:, 1].values
 
+if __name__ == '__main__':
+    from sklearn.datasets import make_blobs
+    from sklearn.metrics import accuracy_score
+
+    X, y = make_blobs(n_samples=500, n_features=7, shuffle=False, random_state=42)
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
 
-    dt = DecisionTree(5)
-    dt.fit(X_train, y_train)
+    model = DecisionTree(max_depth=5)
+    model.fit(X_train, y_train)
 
-    y_pred = dt.predict(X_test)
+    y_pred = model.predict(X_test)
+
+    acc = accuracy_score(y_test, y_pred)
+    print(f'accuracy: {acc * 100.}%')
+
